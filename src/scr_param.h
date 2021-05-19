@@ -59,11 +59,14 @@ const char* scr_param_get(const char* name);
 const kvtree* scr_param_get_hash(const char* name);
 
 /* sets (top level) a parameter to a new value, returning the subkey hash */
-kvtree* scr_param_set(char* name, const char* value);
+kvtree* scr_param_set(const char* name, const char* value);
 
 /* sets a parameter to a new value, returning the hash
  * hash_value should be the return from scr_param_get_hash() if the top level
  * value needs to be preserved */
-kvtree* scr_param_set_hash(char* name, kvtree* hash_value);
+kvtree* scr_param_set_hash(const char* name, kvtree* hash_value);
+
+/* unsets a parameter, returning SCR_FAILURE on failure */
+int scr_param_unset(const char* name);
 
 #endif

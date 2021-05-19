@@ -31,6 +31,7 @@
 #include "scr_util.h"
 #include "scr_io.h"
 #include "kvtree.h"
+#include "spath.h"
 #include "scr_config.h"
 
 #include <stdlib.h>
@@ -350,6 +351,22 @@ int scr_config_write_common(const char* file, const kvtree* hash)
     scr_file_unlink(file);
     return rc;
   }
+
+  /* create directory to hold app config file */
+  spath* dirpath = spath_from_str(file);
+  assert(dirpath != NULL);
+  int dirrc = spath_dirname(dirpath);
+  assert(dirrc == SPATH_SUCCESS);
+  const char* dirname = spath_strdup(dirpath);
+  spath_delete(&dirpath);
+  /* create the directory */
+  mode_t mode_dir = scr_getmode(1, 1, 1);
+  if (scr_mkdir(dirname, mode_dir) != SCR_SUCCESS) {
+    scr_abort(-1, "Failed to create directory %s @ %s:%d",
+      dirname, __FILE__, __LINE__
+    );
+  }
+  scr_free(&dirname);
 
   FILE* fh = fopen(file, "w");
   if (fh != NULL) {

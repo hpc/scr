@@ -906,8 +906,6 @@ int scr_log_init(const char* prefix)
     db_name = strdup(value);
   }
 
-  scr_param_finalize();
-
   /* open log file if enabled */
   if (txt_enable) {
     tmp_rc = scr_log_init_txt(prefix);

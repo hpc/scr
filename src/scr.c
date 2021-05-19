@@ -567,6 +567,7 @@ static int scr_get_params()
   double d;
   unsigned long long ull;
 
+  /* TODO: move these into scr_param_init so that scr_enabled is available eg in SCR_Config */
   /* user may want to disable SCR at runtime, read env var to avoid reading config files */
   if ((value = getenv("SCR_ENABLE")) != NULL) {
     scr_enabled = atoi(value);
@@ -1022,24 +1023,6 @@ static int scr_get_params()
       );
     }
   }
-
-  /* TODO: allow someone to silence this if they are not using scripts? */
-  /* check that user didn't set something different in $SCR_PREFIX or current working dir */
-  value = getenv("SCR_PREFIX");
-  spath* prefix_path = scr_get_prefix(value);
-  char* prefix_str = spath_strdup(prefix_path);
-  if (strcmp(prefix_str, scr_prefix) != 0) {
-    if (scr_my_rank_world == 0) {
-      scr_warn("SCR_PREFIX in environment or cwd `%s' does not match value from config `%s' @ %s:%d",
-        prefix_str, scr_prefix, __FILE__, __LINE__
-      );
-    }
-  }
-  scr_free(&prefix_str);
-  spath_delete(&prefix_path);
-
-  /* done reading parameters, can release the data structures now */
-  scr_param_finalize();
 
   return SCR_SUCCESS;
 }
@@ -2300,6 +2283,8 @@ int SCR_Finalize()
     return SCR_FAILURE;
   }
 
+  scr_param_finalize();
+
   /* bail out if not initialized -- will get bad results */
   if (! scr_initialized) {
     scr_abort(-1, "SCR has not been initialized @ %s:%d", __FILE__, __LINE__);
@@ -2309,11 +2294,6 @@ int SCR_Finalize()
   /* this is not required, but it helps ensure apps
    * are calling this as a collective */
   MPI_Barrier(scr_comm_world);
-
-#if 0
-  /* free user hash if one was allocated */
-  kvtree_delete(&scr_app_hash);
-#endif
 
   if (scr_my_rank_world == 0) {
     /* stop the clock for measuring the compute time */
@@ -2525,37 +2505,6 @@ const char* SCR_Config(const char* config_string)
     return NULL;
   }
 
-#if 0
-  /* allocate a hash to record params set through SCR_Config */
-  if (scr_app_hash == NULL) {
-    scr_app_hash = kvtree_new();
-  }
-#endif
-
-  /* create directory to hold app config file */
-  if (scr_my_rank_world == 0) {
-    /* get the prefix directory */
-    char* value = getenv("SCR_PREFIX");
-    spath* prefix_path = scr_get_prefix(value);
-    spath_append_str(prefix_path, ".scr");
-    const char* dirname = spath_strdup(prefix_path);
-    spath_delete(&prefix_path);
-
-    /* create the directory */
-    mode_t mode_dir = scr_getmode(1, 1, 1);
-    if (scr_mkdir(dirname, mode_dir) != SCR_SUCCESS) {
-      scr_abort(-1, "Failed to create directory %s @ %s:%d",
-        dirname, __FILE__, __LINE__
-      );
-    }
-
-    scr_free(&dirname);
-  }
-  MPI_Barrier(scr_comm_world);
-
-  /* read in our configuration parameters */
-  scr_param_init();
-
   /* after parsing these values will hold values like the following:
    *
    * given a string like "SCR_PREFIX"
@@ -2675,6 +2624,7 @@ const char* SCR_Config(const char* config_string)
              * so we're at a point like "CKPT=0 TYPE=<char>", need to create
              * a hash to hold the rest */
             value_hash = kvtree_new();
+            kvtree_set(value_hash, key, kvtree_new());
           }
           state = in_value;
         }
@@ -2731,6 +2681,9 @@ const char* SCR_Config(const char* config_string)
     }
     assert(value_hash == NULL);
 
+    /* read in our configuration parameters */
+    scr_param_init();
+
     /* lookup the value for the given parameter */
     if (toplevel_value == NULL) {
       /* user is trying to query for the value of a simple key/value pair,
@@ -2763,6 +2716,31 @@ const char* SCR_Config(const char* config_string)
     /* user wants to set or unset a parameter */
     if (value_hash == NULL) {
       /* dealing with a simple key/value parameter pair */
+
+      /* SCR_PREFIX and SCR_CONF_FILE are a special in that they are needed to
+       * construct the path to find user config and apps config files which are
+       * needed for SCR_Config itself.  */
+      if (strcmp(toplevel_key, "SCR_PREFIX") == 0 ||
+          strcmp(toplevel_key, "SCR_CONF_FILE") == 0) {
+        if (scr_app_hash != NULL) {
+          scr_warn("Late attempt to set %s, will not be acted on @ %s:%d",
+            toplevel_key, __FILE__, __LINE__
+          );
+        } else {
+          scr_app_hash = kvtree_new();
+          assert(scr_app_hash);
+        }
+        /* temporarily set value so that scr_param_init can use it */
+        if (toplevel_value) {
+          scr_param_set(toplevel_key, toplevel_value);
+        } else {
+          scr_param_unset(toplevel_key);
+        }
+      }
+
+      /* read in our configuration parameters */
+      scr_param_init();
+
       if (toplevel_value) {
         /* user want to set a value has given a
          * string like "SCR_PREFIX=/path/to/prefix" */
@@ -2770,11 +2748,14 @@ const char* SCR_Config(const char* config_string)
       } else {
         /* user wants to unset a value has given
          * a string like "SCR_PREFIX=" */
-        scr_param_set_hash(toplevel_key, NULL);
+        scr_param_unset(toplevel_key);
       }
     } else {
       /* user wants to set or unset a two-level parameter
        * as in CKPT=0 TYPE=XOR */
+
+      /* read in our configuration parameters */
+      scr_param_init();
 
       /* lookup hash for top level key, as in "CKPT" */
       kvtree* toplevel_hash = (kvtree*)scr_param_get_hash(toplevel_key);
@@ -2803,8 +2784,6 @@ const char* SCR_Config(const char* config_string)
   }
 
   free(writable_config_string);
-
-  scr_param_finalize();
 
   return retval;
 }

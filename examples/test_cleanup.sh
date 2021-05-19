@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # SCR cleanup script
 # Usage:

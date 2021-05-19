@@ -215,7 +215,6 @@ int main (int argc, char *argv[])
   if ((value = scr_param_get("SCR_LOG_ENABLE")) != NULL) {
     scr_log_enable = atoi(value);
   }
-  scr_param_finalize();
 
   /* we just use the string returned by gethostname */
   char hostname[256] = "nullhost";
@@ -265,5 +264,6 @@ int main (int argc, char *argv[])
     scr_log_finalize();
   }
 
+  scr_param_finalize();
   return rc;
 }

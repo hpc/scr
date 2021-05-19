@@ -37,10 +37,9 @@
 #include <stdarg.h>
 #include <errno.h>
 
-/* since multiple objects may require parameters, and thus init and finalize,
- * we keep a reference so we don't clear the data structures until all modules
- * which currently are using the object have finished */
-static int scr_param_ref_count = 0;
+/* since multiple objects may require parameters, we keep track if the parameter
+ * database has been initialized and load from disk only once */
+static int scr_param_initialized = 0;
 
 /* name of system configuration file we should read */
 static char scr_config_file[SCR_MAX_FILENAME] = SCR_CONFIG_FILE;
@@ -330,19 +329,19 @@ const kvtree* scr_param_get_hash(const char* name)
 
 /* allocates a new string (to be freed with scr_free)
  * that is path to user config file */
-static char* user_config_path()
+static char* user_config_path(void)
 {
   char* file = NULL;
 
   /* first, use SCR_CONF_FILE if it's set */
-  char* value = getenv("SCR_CONF_FILE");
+  const char* value = scr_param_get("SCR_CONF_FILE");
   if (value != NULL) {
     file = strdup(value);
     return file;
   }
 
   /* otherwise, look in the prefix directory */
-  value = getenv("SCR_PREFIX");
+  value = scr_param_get("SCR_PREFIX");
   spath* prefix_path = scr_get_prefix(value);
 
   /* tack file name on to directory */
@@ -355,12 +354,12 @@ static char* user_config_path()
 
 /* allocates a new string (to be freed with scr_free)
  * that is path to application config file */
-static char* app_config_path()
+static char* app_config_path(void)
 {
   char* file = NULL;
 
   /* get the prefix directory */
-  char* value = getenv("SCR_PREFIX");
+  const char* value = scr_param_get("SCR_PREFIX");
   spath* prefix_path = scr_get_prefix(value);
 
   /* tack file name on to directory */
@@ -373,10 +372,10 @@ static char* app_config_path()
 }
 
 /* read config files and store contents */
-int scr_param_init()
+int scr_param_init(void)
 {
   /* allocate storage and read in config files if we haven't already */
-  if (scr_param_ref_count == 0) {
+  if (!scr_param_initialized) {
     /* all parameters used by scripts that run before main code */
     static const char* no_app_params[] = {
       "CACHE",
@@ -385,7 +384,6 @@ int scr_param_init()
       "SCR_CACHE_BASE",
       "SCR_CACHE_SIZE",
       "SCR_CNTL_BASE",
-      "SCR_CONF_FILE",
       "SCR_EXCLUDE_NODES",
       "SCR_JOB_NAME",
       "SCR_LOG_ENABLE",
@@ -397,7 +395,6 @@ int scr_param_init()
       "SCR_LOG_DB_USER",
       "SCR_LOG_SYSLOG_ENABLE",
       "SCR_LOG_TXT_ENABLE",
-      "SCR_PREFIX",
       "SCR_WATCHDOG_TIMEOUT",
       "SCR_WATCHDOG_TIMEOUT_PFS",
     };
@@ -409,8 +406,43 @@ int scr_param_init()
     };
 #endif
 
+    assert(scr_no_user_hash == NULL);
+    assert(scr_env_hash == NULL);
+    assert(scr_user_hash == NULL);
+    /* assert(scr_app_hash == NULL); possible already initialized by SCR_Config */
+    assert(scr_no_app_hash == NULL);
+    assert(scr_system_hash == NULL);
+
+    /* allocate hash object to hold names we cannot read from the
+     * environment */
+    scr_no_user_hash = kvtree_new();
+
+    /* initialize our hash to cache lookups to getenv */
+    scr_env_hash = kvtree_new();
+
+    /* initialize our hash for user configuration file */
+    scr_user_hash = kvtree_new();
+
+    /* initialize our hash for SCR_Config values, might be already
+     * initialized if SCR_Config has been called */
+    if (scr_app_hash == NULL) {
+      scr_app_hash = kvtree_new();
+    }
+
     /* allocate hash object to store values that must not be changed */
     scr_no_app_hash = kvtree_new();
+
+    /* initialize our hash for values from system config file */
+    scr_system_hash = kvtree_new();
+
+    /* safe to call scr_param_get after this */
+    scr_param_initialized = 1;
+
+    /* allocate hash object to store values from user config file,
+     * if specified */
+    char* user_file = user_config_path();
+    scr_config_read(user_file, scr_user_hash);
+    scr_free(&user_file);
 
     /* load list of params used in script into the hash listing
      * params users cannot set with SCR_Config */
@@ -419,34 +451,14 @@ int scr_param_init()
       kvtree_set(scr_no_app_hash, no_app_params[i], kvtree_new());
     }
 
-    /* allocate hash object to hold names we cannot read from the
-     * environment */
-    scr_no_user_hash = kvtree_new();
-
     /* read in app config file which records any parameters set
      * by application through calls to SCR_Config */
     char* app_file = app_config_path();
-    if (app_file != NULL) {
-      scr_app_hash = kvtree_new();
-      scr_config_read(app_file, scr_app_hash);
-    }
+    scr_config_read(app_file, scr_app_hash);
     scr_free(&app_file);
 
-    /* allocate hash object to store values from user config file,
-     * if specified */
-    char* user_file = user_config_path();
-    if (user_file != NULL) {
-      scr_user_hash = kvtree_new();
-      scr_config_read(user_file, scr_user_hash);
-    }
-    scr_free(&user_file);
-
     /* allocate hash object to store values from system config file */
-    scr_system_hash = kvtree_new();
     scr_config_read(scr_config_file, scr_system_hash);
-
-    /* initialize our hash to cache lookups to getenv */
-    scr_env_hash = kvtree_new();
 
     /* warn user if they set any parameters in their environment or user
      * config file which aren't permitted */
@@ -470,20 +482,14 @@ int scr_param_init()
     }
   }
 
-  /* increment our reference count */
-  scr_param_ref_count++;
-
   return SCR_SUCCESS;
 }
 
 /* free contents from config files */
 int scr_param_finalize()
 {
-  /* decrement our reference count */
-  scr_param_ref_count--;
-
   /* if the reference count is zero, free the data structures */
-  if (scr_param_ref_count == 0) {
+  if (scr_param_initialized) {
     /* NOTE: we do not free scr_app_hash here,
      * since that is allocated by SCR_Config not scr_param_init,
      * it will be freed in SCR_Finalize instead */
@@ -511,13 +517,15 @@ int scr_param_finalize()
 
     /* free the hash listing parameters user cannot set */
     kvtree_delete(&scr_no_user_hash);
+
+    scr_param_initialized = 0;
   }
 
   return SCR_SUCCESS;
 }
 
 /* sets (top level) a parameter to a new value, returning the subkey hash */
-kvtree* scr_param_set(char* name, const char* value)
+kvtree* scr_param_set(const char* name, const char* value)
 {
   /* cannot set parameters that are used by scripts */
   if (kvtree_get(scr_no_app_hash, name)) {
@@ -536,7 +544,7 @@ kvtree* scr_param_set(char* name, const char* value)
 /* sets a parameter to a new value, returning the hash
  * hash_value should be the return from scr_param_get_hash() if the top level
  * value needs to be preserved */
-kvtree* scr_param_set_hash(char* name, kvtree* hash_value)
+kvtree* scr_param_set_hash(const char* name, kvtree* hash_value)
 {
   /* cannot set parameters that are used by scripts */
   if (kvtree_get(scr_no_app_hash, name)) {
@@ -546,4 +554,18 @@ kvtree* scr_param_set_hash(char* name, kvtree* hash_value)
   }
 
   return kvtree_set(scr_app_hash, name, hash_value);
+}
+
+/* unsets a parameter, returning 0 if the parameter did not exist */
+int scr_param_unset(const char* name)
+{
+  /* cannot set parameters that are used by scripts */
+  if (kvtree_get(scr_no_app_hash, name)) {
+    scr_dbg(1, "%s should not be changed at runtime if also using SCR scripts",
+      name
+    );
+  }
+
+  int rc = kvtree_unset(scr_app_hash, name);
+  return (rc == KVTREE_SUCCESS) ? SCR_SUCCESS : SCR_FAILURE;
 }
