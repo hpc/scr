@@ -22,6 +22,7 @@ extern "C" {
 
 /* constants returned from SCR functions for success and failure */
 #define SCR_SUCCESS (0)
+#define SCR_FAILURE (1)
 
 /* maximum characters in a filename returned by SCR */
 #define SCR_MAX_FILENAME 1024

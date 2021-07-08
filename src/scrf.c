@@ -158,13 +158,13 @@ FORTRAN_API void FORT_CALL scr_config_(char* cfg FORT_MIXED_LEN(cfg_len),
   /* convert name from a Fortran string to C string */
   char cfg_tmp[SCR_MAX_FILENAME];
   if (scr_fstr2cstr(cfg, cfg_len, cfg_tmp, sizeof(cfg_tmp)) != 0) {
-    *ierror = !SCR_SUCCESS;
+    *ierror = SCR_FAILURE;
     return;
   }
 
   const char *val_tmp = SCR_Config(cfg_tmp);
   if (!val_tmp) {
-    *ierror = !SCR_SUCCESS;
+    *ierror = SCR_FAILURE;
     return;
   }
   /* TODO: there is a memory leak here. scr_config, when called to get a value
@@ -179,7 +179,7 @@ FORTRAN_API void FORT_CALL scr_config_(char* cfg FORT_MIXED_LEN(cfg_len),
 
   /* convert val to Fortran string */
   if (scr_cstr2fstr(val_tmp, val, val_len) != 0) {
-    *ierror = !SCR_SUCCESS;
+    *ierror = SCR_FAILURE;
     return;
   }
 
@@ -200,7 +200,7 @@ FORTRAN_API void FORT_CALL scr_have_restart_(int* flag, char* name FORT_MIXED_LE
   if (*flag) {
     /* convert name to Fortran string */
     if (scr_cstr2fstr(name_tmp, name, name_len) != 0) {
-      *ierror = !SCR_SUCCESS;
+      *ierror = SCR_FAIULRE;
       return;
     }
   }
@@ -216,7 +216,7 @@ FORTRAN_API void FORT_CALL scr_start_restart_(char* name FORT_MIXED_LEN(name_len
 
   /* convert name to Fortran string */
   if (scr_cstr2fstr(name_tmp, name, name_len) != 0) {
-    *ierror = !SCR_SUCCESS;
+    *ierror = SCR_FAIULRE;
     return;
   }
 
@@ -262,7 +262,7 @@ FORTRAN_API void FORT_CALL scr_start_output_(char* name FORT_MIXED_LEN(name_len)
   /* convert name from a Fortran string to C string */
   char name_tmp[SCR_MAX_FILENAME];
   if (scr_fstr2cstr(name, name_len, name_tmp, sizeof(name_tmp)) != 0) {
-    *ierror = !SCR_SUCCESS;
+    *ierror = SCR_FAIULRE;
     return;
   }
 
@@ -290,7 +290,7 @@ FORTRAN_API void FORT_CALL scr_route_file_(char* name FORT_MIXED_LEN(name_len),
   /* convert filename from a Fortran string to C string */
   char name_tmp[SCR_MAX_FILENAME];
   if (scr_fstr2cstr(name, name_len, name_tmp, sizeof(name_tmp)) != 0) {
-    *ierror = !SCR_SUCCESS;
+    *ierror = SCR_FAIULRE;
     return;
   }
 
@@ -300,7 +300,7 @@ FORTRAN_API void FORT_CALL scr_route_file_(char* name FORT_MIXED_LEN(name_len),
 
   /* convert filename from C to Fortran string */
   if (scr_cstr2fstr(file_tmp, file, file_len) != 0) {
-    *ierror = !SCR_SUCCESS;
+    *ierror = SCR_FAIULRE;
     return;
   }
 
@@ -316,7 +316,7 @@ FORTRAN_API void FORT_CALL scr_current_(char* name FORT_MIXED_LEN(name_len), int
   /* convert name from a Fortran string to C string */
   char name_tmp[SCR_MAX_FILENAME];
   if (scr_fstr2cstr(name, name_len, name_tmp, sizeof(name_tmp)) != 0) {
-    *ierror = !SCR_SUCCESS;
+    *ierror = SCR_FAIULRE;
     return;
   }
 
@@ -330,7 +330,7 @@ FORTRAN_API void FORT_CALL scr_drop_(char* name FORT_MIXED_LEN(name_len), int* i
   /* convert name from a Fortran string to C string */
   char name_tmp[SCR_MAX_FILENAME];
   if (scr_fstr2cstr(name, name_len, name_tmp, sizeof(name_tmp)) != 0) {
-    *ierror = !SCR_SUCCESS;
+    *ierror = SCR_FAIULRE;
     return;
   }
 
@@ -344,7 +344,7 @@ FORTRAN_API void FORT_CALL scr_delete_(char* name FORT_MIXED_LEN(name_len), int*
   /* convert name from a Fortran string to C string */
   char name_tmp[SCR_MAX_FILENAME];
   if (scr_fstr2cstr(name, name_len, name_tmp, sizeof(name_tmp)) != 0) {
-    *ierror = !SCR_SUCCESS;
+    *ierror = SCR_FAIULRE;
     return;
   }
 

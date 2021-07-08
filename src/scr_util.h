@@ -33,8 +33,6 @@
 #ifndef SCR_UTIL_H
 #define SCR_UTIL_H
 
-#define SCR_FAILURE (1)
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>

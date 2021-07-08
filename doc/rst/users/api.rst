@@ -135,6 +135,7 @@ the call allocates and returns a pointer to a string holding the value of the pa
 The caller is responsible for calling :code:`free` to release the returned string.
 If the parameter has not been set, :code:`NULL` is returned.
 For Fortran applications, the value is returned as a string in the :code:`VAL` argument.
+If the parameter has not been set, :code:`IERROR` is set to :code:`SCR_FAILURE` in Fortran.
 
 To unset the value of a simple parameter, one specifies the parameter name with an empty value
 in the form of a :code:`key=` string as the :code:`config` argument.
