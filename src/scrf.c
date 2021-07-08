@@ -32,6 +32,31 @@ typedef int SCR_Fint;
 # define FORT_CALL
 #endif
 
+#ifndef USE_FORTRAN_TRAILING_UNDERSCORES
+/* IBM's xl compiler does not by default add underscores,
+ * all others add underscores */
+/* This tests the C compiler but technically the Fortran compiler is what
+ * matters, so combining IBM xlf with GNU gcc is not going to work */
+# if defined(__ibmxl__)
+#  define USE_FORTRAN_TRAILING_UNDERSCORES 0
+# elif defined(__INTEL_COMPILER)
+#  define USE_FORTRAN_TRAILING_UNDERSCORES 1
+# elif defined(_CRAYC) /* _CRAYFTN */
+#  define USE_FORTRAN_TRAILING_UNDERSCORES 1
+# elif defined(__PGI)
+#  define USE_FORTRAN_TRAILING_UNDERSCORES 1
+# elif defined(__GNUC__) /* __GFORTRAN__ */
+/* keep this last since some compilers claims to be GCC */
+#  define USE_FORTRAN_TRAILING_UNDERSCORES 1
+# endif
+#endif
+
+#if USE_FORTRAN_TRAILING_UNDERSCORES
+# define FORT_NAME(a) a ## _
+#else
+# define FORT_NAME(a) a
+#endif
+
 #ifdef USE_FORT_MIXED_STR_LEN
 # define FORT_MIXED_LEN_DECL   , SCR_Fint
 # define FORT_END_LEN_DECL
@@ -128,19 +153,19 @@ static int scr_cstr2fstr(const char* cstr, char* fstr, int flen)
  * Init, Finalize, Exit
  *================================================*/
 
-FORTRAN_API void FORT_CALL scr_init_(int* ierror)
+FORTRAN_API void FORT_CALL FORT_NAME(scr_init)(int* ierror)
 {
   *ierror = SCR_Init();
   return;
 }
 
-FORTRAN_API void FORT_CALL scr_finalize_(int* ierror)
+FORTRAN_API void FORT_CALL FORT_NAME(scr_finalize)(int* ierror)
 {
   *ierror = SCR_Finalize();
   return;
 }
 
-FORTRAN_API void FORT_CALL scr_should_exit_(int* flag, int* ierror)
+FORTRAN_API void FORT_CALL FORT_NAME(scr_should_exit)(int* flag, int* ierror)
 {
   *ierror = SCR_Should_exit(flag);
   return;
@@ -149,7 +174,7 @@ FORTRAN_API void FORT_CALL scr_should_exit_(int* flag, int* ierror)
 /*================================================
  * Programmatically change configuration options
  *================================================*/
-FORTRAN_API void FORT_CALL scr_config_(char* cfg FORT_MIXED_LEN(cfg_len),
+FORTRAN_API void FORT_CALL FORT_NAME(scr_config)(char* cfg FORT_MIXED_LEN(cfg_len),
                                       char* val FORT_MIXED_LEN(val_len),
                                       int* ierror FORT_END_LEN(cfg_len) FORT_END_LEN(val_len))
 {
@@ -190,7 +215,7 @@ FORTRAN_API void FORT_CALL scr_config_(char* cfg FORT_MIXED_LEN(cfg_len),
  * Restart functions
  *================================================*/
 
-FORTRAN_API void FORT_CALL scr_have_restart_(int* flag, char* name FORT_MIXED_LEN(name_len), int* ierror FORT_END_LEN(name_len))
+FORTRAN_API void FORT_CALL FORT_NAME(scr_have_restart)(int* flag, char* name FORT_MIXED_LEN(name_len), int* ierror FORT_END_LEN(name_len))
 {
   /* check whether a checkpoint is loaded */
   char name_tmp[SCR_MAX_FILENAME];
@@ -208,7 +233,7 @@ FORTRAN_API void FORT_CALL scr_have_restart_(int* flag, char* name FORT_MIXED_LE
   return;
 }
 
-FORTRAN_API void FORT_CALL scr_start_restart_(char* name FORT_MIXED_LEN(name_len), int* ierror FORT_END_LEN(name_len))
+FORTRAN_API void FORT_CALL FORT_NAME(scr_start_restart)(char* name FORT_MIXED_LEN(name_len), int* ierror FORT_END_LEN(name_len))
 {
   /* start restart and get name */
   char name_tmp[SCR_MAX_FILENAME];
@@ -223,7 +248,7 @@ FORTRAN_API void FORT_CALL scr_start_restart_(char* name FORT_MIXED_LEN(name_len
   return;
 }
 
-FORTRAN_API void FORT_CALL scr_complete_restart_(int* valid, int* ierror)
+FORTRAN_API void FORT_CALL FORT_NAME(scr_complete_restart)(int* valid, int* ierror)
 {
   int valid_tmp = *valid;
   *ierror = SCR_Complete_restart(valid_tmp);
@@ -234,19 +259,19 @@ FORTRAN_API void FORT_CALL scr_complete_restart_(int* valid, int* ierror)
  * Checkpoint functions
  *================================================*/
 
-FORTRAN_API void FORT_CALL scr_need_checkpoint_(int* flag, int* ierror)
+FORTRAN_API void FORT_CALL FORT_NAME(scr_need_checkpoint)(int* flag, int* ierror)
 {
   *ierror = SCR_Need_checkpoint(flag);
   return;
 }
 
-FORTRAN_API void FORT_CALL scr_start_checkpoint_(int* ierror)
+FORTRAN_API void FORT_CALL FORT_NAME(scr_start_checkpoint)(int* ierror)
 {
   *ierror = SCR_Start_checkpoint();
   return;
 }
 
-FORTRAN_API void FORT_CALL scr_complete_checkpoint_(int* valid, int* ierror)
+FORTRAN_API void FORT_CALL FORT_NAME(scr_complete_checkpoint)(int* valid, int* ierror)
 {
   int valid_tmp = *valid;
   *ierror = SCR_Complete_checkpoint(valid_tmp);
@@ -257,7 +282,7 @@ FORTRAN_API void FORT_CALL scr_complete_checkpoint_(int* valid, int* ierror)
  * Output functions
  *================================================*/
 
-FORTRAN_API void FORT_CALL scr_start_output_(char* name FORT_MIXED_LEN(name_len), int* flags, int* ierror FORT_END_LEN(name_len))
+FORTRAN_API void FORT_CALL FORT_NAME(scr_start_output)(char* name FORT_MIXED_LEN(name_len), int* flags, int* ierror FORT_END_LEN(name_len))
 {
   /* convert name from a Fortran string to C string */
   char name_tmp[SCR_MAX_FILENAME];
@@ -272,7 +297,7 @@ FORTRAN_API void FORT_CALL scr_start_output_(char* name FORT_MIXED_LEN(name_len)
   return;
 }
 
-FORTRAN_API void FORT_CALL scr_complete_output_(int* valid, int* ierror)
+FORTRAN_API void FORT_CALL FORT_NAME(scr_complete_output)(int* valid, int* ierror)
 {
   int valid_tmp = *valid;
   *ierror = SCR_Complete_output(valid_tmp);
@@ -283,7 +308,7 @@ FORTRAN_API void FORT_CALL scr_complete_output_(int* valid, int* ierror)
  * Route file
  *================================================*/
 
-FORTRAN_API void FORT_CALL scr_route_file_(char* name FORT_MIXED_LEN(name_len),
+FORTRAN_API void FORT_CALL FORT_NAME(scr_route_file)(char* name FORT_MIXED_LEN(name_len),
                                            char* file FORT_MIXED_LEN(file_len),
                                            int* ierror FORT_END_LEN(name_len) FORT_END_LEN(file_len))
 {
@@ -311,7 +336,7 @@ FORTRAN_API void FORT_CALL scr_route_file_(char* name FORT_MIXED_LEN(name_len),
  * Dataset management
  *================================================*/
 
-FORTRAN_API void FORT_CALL scr_current_(char* name FORT_MIXED_LEN(name_len), int* ierror FORT_END_LEN(name_len))
+FORTRAN_API void FORT_CALL FORT_NAME(scr_current)(char* name FORT_MIXED_LEN(name_len), int* ierror FORT_END_LEN(name_len))
 {
   /* convert name from a Fortran string to C string */
   char name_tmp[SCR_MAX_FILENAME];
@@ -325,7 +350,7 @@ FORTRAN_API void FORT_CALL scr_current_(char* name FORT_MIXED_LEN(name_len), int
   return;
 }
 
-FORTRAN_API void FORT_CALL scr_drop_(char* name FORT_MIXED_LEN(name_len), int* ierror FORT_END_LEN(name_len))
+FORTRAN_API void FORT_CALL FORT_NAME(scr_drop)(char* name FORT_MIXED_LEN(name_len), int* ierror FORT_END_LEN(name_len))
 {
   /* convert name from a Fortran string to C string */
   char name_tmp[SCR_MAX_FILENAME];
@@ -339,7 +364,7 @@ FORTRAN_API void FORT_CALL scr_drop_(char* name FORT_MIXED_LEN(name_len), int* i
   return;
 }
 
-FORTRAN_API void FORT_CALL scr_delete_(char* name FORT_MIXED_LEN(name_len), int* ierror FORT_END_LEN(name_len))
+FORTRAN_API void FORT_CALL FORT_NAME(scr_delete)(char* name FORT_MIXED_LEN(name_len), int* ierror FORT_END_LEN(name_len))
 {
   /* convert name from a Fortran string to C string */
   char name_tmp[SCR_MAX_FILENAME];

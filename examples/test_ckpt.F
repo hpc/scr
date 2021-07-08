@@ -123,7 +123,7 @@
           iter_time1 = MPI_Wtime (ierr)
            write (6, 650) loop, iter_time1 - iter_time0
  650       format ("Iteration = ", i6, ", Run Time = ", f10.4, " sec.")
-#ifdef IBM
+#ifdef __ibmxl__
            call flush_ (6)
 #else
            call flush (6)

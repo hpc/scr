@@ -81,7 +81,6 @@ char* scr_username    = NULL;           /* username of owner for running job */
 char* scr_jobid       = NULL;           /* unique job id string of current job */
 char* scr_jobname     = NULL;           /* jobname string, used to tie different runs together */
 char* scr_clustername = NULL;           /* name of cluster running job */
-int scr_have_restart  = 0;              /* tracks whether a checkpoint is available for restart */
 int scr_dataset_id    = 0;              /* keeps track of the dataset id */
 int scr_checkpoint_id = 0;              /* keeps track of the checkpoint id */
 int scr_ckpt_dset_id  = 0;              /* keeps track of the checkpoint id */

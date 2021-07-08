@@ -57,6 +57,9 @@ static scr_filemap* scr_map = NULL;
 /* tracks redundancy descriptor for current dataset */
 static scr_reddesc* scr_rd = NULL;
 
+/* tracks whether a checkpoint is available for restart */
+static int scr_have_restart;
+
 static double scr_time_compute_start;     /* records the start time of the current compute phase */
 static double scr_time_compute_end;       /* records the end time of the current compute phase */
 

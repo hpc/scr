@@ -11,6 +11,12 @@
 // Build Options
 #cmakedefine HAVE_FORTRAN_API
 
+// cpp hackery to evaluate to false if USE_FORTRAN_TRAILING_UNDERSCORES is
+// the empty string and true if it is 0 or 1
+#if (1 - @USE_FORTRAN_TRAILING_UNDERSCORES@ -1 != 2)
+#define USE_FORTRAN_TRAILING_UNDERSCORES @USE_FORTRAN_TRAILING_UNDERSCORES@
+#endif
+
 // SCR-Specific Configured Paths
 #define SCR_CACHE_BASE "@SCR_CACHE_BASE@"
 #define SCR_CNTL_BASE "@SCR_CNTL_BASE@"

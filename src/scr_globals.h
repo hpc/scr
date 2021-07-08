@@ -139,7 +139,6 @@ extern char* scr_username;    /* username of owner for running job */
 extern char* scr_jobid;       /* unique job id string of current job */
 extern char* scr_jobname;     /* jobname string, used to tie different runs together */
 extern char* scr_clustername; /* name of cluster job is running on */
-extern int scr_have_restart;  /* indicates whether a checkpoint is available for restart */
 extern int scr_dataset_id;    /* keeps track of the current dataset id */
 extern int scr_checkpoint_id; /* keeps track of the current checkpoint id */
 extern int scr_ckpt_dset_id;  /* keeps track of the dataset id for the current checkpoint */
