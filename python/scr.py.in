@@ -219,7 +219,7 @@ def config(conf):
     return _pystr(val)
   return None
 
-def init():
+def init(params=None):
   """Initialize the SCR library.
 
   Must be called before any other SCR method, except config().
@@ -227,6 +227,14 @@ def init():
   SCR also identifies and loads the most recent checkpoint.
 
   Maps to SCR_Init in libscr.
+
+  Parameters
+  ----------
+  params : str, list, or dict, default=None
+      Convenience to set configuration parameters before calling SCR_Init.
+      As str, value is passed to config().
+      As list, each item is passed to config().
+      As dict, each key,val is passed as "key=value" to config(), and "key=" if val is None.
 
   Returns
   -------
@@ -237,6 +245,33 @@ def init():
   RuntimeError
       if SCR_Init returns an error
   """
+  # as a convenience, we can optionally call scr.config()
+  # to set or unset parameters before calling SCR_Init
+  if params:
+    if type(params) is str:
+      # got a string, pass directly to scr.config
+      # supports usage like scr.init("SCR_DEBUG=1")
+      config(params)
+    elif type(params) is list:
+      # got a list, pass each to scr.config
+      # supports usage like scr.init(["SCR_DEBUG=1", "SCR_CACHE_SIZE=2"])
+      for i in params:
+        config(str(i))
+    elif type(params) is dict:
+      # got a dictionary, call scr.config for each key=value pair
+      # if value is None, pass "key=" to config to unset a param
+      # supports usage like scr.init({"SCR_DEBUG": 1, "SCR_CACHE_SIZE": 2})
+      for k in params:
+        v = params[k]
+        if v is None:
+          # unset a parameter if value is None, "key="
+          config(str(k) + "=")
+        else:
+          # set a parameter otherwise, "key=value"
+          config(str(k) + "=" + str(v))
+    else:
+      raise RuntimeError("scr.init params argument type must be 'str', 'list', or 'dict', got: " + str(type(params)))
+
   rc = _libscr.SCR_Init()
   if rc != _libscr.SCR_SUCCESS:
     raise RuntimeError("SCR_Init failed")
